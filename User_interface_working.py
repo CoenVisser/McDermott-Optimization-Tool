@@ -97,15 +97,15 @@ class DrawShapesApp(tk.Tk):
             # Redraw previous shapes with correct colors and thickness
             for rect in self.storage_sites:
                 self.canvas.create_rectangle(
-                    rect["x1"], rect["y1"], rect["x2"], rect["y2"], outline='red', width=2
+                    rect["x1"], rect["y1"], rect["x2"], rect["y2"], outline='red', width=4
                 )
             for rect in self.construction_sites:
                 self.canvas.create_rectangle(
-                    rect["x1"], rect["y1"], rect["x2"], rect["y2"], outline='#00FF7F', width=2
+                    rect["x1"], rect["y1"], rect["x2"], rect["y2"], outline='#00FF7F', width=4
                 )
             for road in self.roads:
                 self.canvas.create_line(
-                    road["x1"], road["y1"], road["x2"], road["y2"], fill='light blue', width=2
+                    road["x1"], road["y1"], road["x2"], road["y2"], fill='#42bff5', width=4
                 )
 
     def on_resize(self, event):
@@ -124,10 +124,10 @@ class DrawShapesApp(tk.Tk):
 
             shape_type = self.rect_type_var.get()  # Get current drawing type
             if shape_type == "Roads":
-                self.canvas.create_line(x1, y1, x2, y2, fill='light blue', width=2, tag='preview')
+                self.canvas.create_line(x1, y1, x2, y2, fill='#42bff5', width=4, tag='preview')
             else:
                 outline_color = 'red' if shape_type == "Storage sites" else '#00FF7F'
-                self.canvas.create_rectangle(x1, y1, x2, y2, outline=outline_color, width=2, tag='preview')
+                self.canvas.create_rectangle(x1, y1, x2, y2, outline=outline_color, width=4, tag='preview')
 
     def end_draw(self, event):
         if self.drawing:
@@ -164,7 +164,7 @@ class DrawShapesApp(tk.Tk):
                                 new_road["x2"], new_road["y2"] = point
 
                 self.roads.append(new_road)
-                self.canvas.create_line(new_road["x1"], new_road["y1"], new_road["x2"], new_road["y2"], fill='light blue', width=2)
+                self.canvas.create_line(new_road["x1"], new_road["y1"], new_road["x2"], new_road["y2"], fill='#42bff5', width=4)
 
             else:
                 outline_color = 'red' if shape_type == "Storage sites" else '#00FF7F'
@@ -183,20 +183,10 @@ class DrawShapesApp(tk.Tk):
                         "y2": y2,
                     })
 
-                self.canvas.create_rectangle(x1, y1, x2, y2, outline=outline_color, width=2)
+                self.canvas.create_rectangle(x1, y1, x2, y2, outline=outline_color, width=4)
 
-            # refresh the canvas: delete all items from the canvas
-            self.canvas.delete("all")
-
-            # refresh the canvas: redraw items
-            for road in self.roads:
-                self.canvas.create_line(road["x1"], road["y1"], road["x2"], road["y2"], fill='light blue', width=2)
-
-            for s_site in self.storage_sites:
-                self.canvas.create_rectangle(s_site["x1"], s_site["y1"], s_site["x2"], s_site["y2"], outline='red', width=2)
-
-            for c_site in self.construction_sites:
-                self.canvas.create_rectangle(c_site["x1"], c_site["y1"], c_site["x2"], c_site["y2"], outline='#00FF7F', width=2)
+            # refresh the canvas
+            self.update_image_display()
 
     def save_coordinates(self):
         if self.storage_sites or self.construction_sites or self.roads:
