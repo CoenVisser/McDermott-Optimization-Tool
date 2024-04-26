@@ -19,5 +19,5 @@ $t_{ijk}$: Number of trips to transport material k from storage location j to bu
 
 
 The objective function (to be minimized) is as follows:
-$`F= \sum_{i=1}^n \sum_{j=1}^{m} \sum_{k=1}^{l  } t_{i, j, k} \times 2 \times \text{distance}(j, i) \times \text{fuel\_rate}(k)`$
+$`F= \sum_{i=1}^{n} \sum_{j=1}^{m} \sum_{k=1}^{l  } t_{i, j, k} \times 2 \times \text{distance}(j, i) \times \text{fuel\_rate}(k)`$
 -------------------

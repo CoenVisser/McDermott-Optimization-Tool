@@ -2,10 +2,6 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 import numpy as np
-import math
-
-# Threshold for connecting nearby endpoints
-CONNECTION_THRESHOLD = 100  # Adjust this as needed
 
 # Application class
 class DrawShapesApp(tk.Tk):
@@ -112,29 +108,6 @@ class DrawShapesApp(tk.Tk):
                     road["x1"], road["y1"], road["x2"], road["y2"], fill='light blue', width=2
                 )
 
-    def find_closest_line(self, x1, y1):
-        """Find the closest existing road line's endpoint to the given point"""
-        closest_distance = CONNECTION_THRESHOLD
-        closest_index = -1
-        closest_point = None
-
-        for index, road in enumerate(self.roads):
-            # Calculate distances to the start and end of the road line
-            dist_to_start = math.sqrt((x1 - road["x1"])**2 + (y1 - road["y1"])**2)
-            dist_to_end = math.sqrt((x1 - road["x2"])**2 + (y1 - road["y2"])**2)
-
-            # Find the closest point and distance
-            if dist_to_start < closest_distance:
-                closest_distance = dist_to_start
-                closest_index = index
-                closest_point = (road["x1"], road["y1"])
-            elif dist_to_end < closest_distance:
-                closest_distance = dist_to_end
-                closest_index = index
-                closest_point = (road["x2"], road["y2"])
-
-        return closest_index, closest_point
-
     def on_resize(self, event):
         # Recalculate the image size and position upon window resizing
         self.update_image_display()
@@ -149,7 +122,7 @@ class DrawShapesApp(tk.Tk):
             x1, y1 = self.current_shape[0]
             x2, y2 = event.x, event.y
 
-            shape_type = self.rect_type_var.get()
+            shape_type = self.rect_type_var.get()  # Get current drawing type
             if shape_type == "Roads":
                 self.canvas.create_line(x1, y1, x2, y2, fill='light blue', width=2, tag='preview')
             else:
@@ -166,33 +139,33 @@ class DrawShapesApp(tk.Tk):
             shape_type = self.rect_type_var.get()
 
             if shape_type == "Roads":
-                # Find the closest existing road line to connect to
-                closest_index, closest_point = self.find_closest_line(x2, y2)
+                new_road = {
+                    "x1": x1,
+                    "y1": y1,
+                    "x2": x2,
+                    "y2": y2,
+                }
 
-                # Draw a new connected line if there's a close point
-                if closest_point:
-                    self.roads.append({
-                        "x1": x1,
-                        "y1": y1,
-                        "x2": closest_point[0],
-                        "y2": closest_point[1],
-                    })
-                    self.canvas.create_line(x1, y1, closest_point[0], closest_point[1], fill='light blue', width=2)
-                    
-                    # Delete the old unconnected lines
-                    if closest_index >= 0:
-                        self.roads.pop(closest_index)
-                        self.canvas.delete("all")  # Clear all shapes to update the view
-                        self.update_image_display()  # Redraw with updated road lines
-                else:
-                    # If no connection, draw a normal line
-                    self.roads.append({
-                        "x1": x1,
-                        "y1": y1,
-                        "x2": x2,
-                        "y2": y2,
-                    })
-                    self.canvas.create_line(x1, y1, x2, y2, fill='light blue', width=2)
+                # Define a threshold for how close points should be to be considered the same
+                threshold = 25  # Adjust this value as needed
+
+                for road in self.roads:
+                    for new_point, point in [((x1, y1), (road["x1"], road["y1"])),
+                                            ((x1, y1), (road["x2"], road["y2"])),
+                                            ((x2, y2), (road["x1"], road["y1"])),
+                                            ((x2, y2), (road["x2"], road["y2"]))]:
+                        # Calculate Euclidean distance
+                        distance = ((new_point[0] - point[0]) ** 2 + (new_point[1] - point[1]) ** 2) ** 0.5
+                        if distance < threshold:
+                            # Replace the new point with the existing point
+                            if new_point == (x1, y1):
+                                new_road["x1"], new_road["y1"] = point
+                            else:
+                                new_road["x2"], new_road["y2"] = point
+
+                self.roads.append(new_road)
+                self.canvas.create_line(new_road["x1"], new_road["y1"], new_road["x2"], new_road["y2"], fill='light blue', width=2)
+
             else:
                 outline_color = 'red' if shape_type == "Storage sites" else '#00FF7F'
                 if shape_type == "Storage sites":
@@ -209,14 +182,28 @@ class DrawShapesApp(tk.Tk):
                         "x2": x2,
                         "y2": y2,
                     })
-                    self.canvas.create_rectangle(x1, y1, x2, y2, outline=outline_color, width=2)
+
+                self.canvas.create_rectangle(x1, y1, x2, y2, outline=outline_color, width=2)
+
+            # refresh the canvas: delete all items from the canvas
+            self.canvas.delete("all")
+
+            # refresh the canvas: redraw items
+            for road in self.roads:
+                self.canvas.create_line(road["x1"], road["y1"], road["x2"], road["y2"], fill='light blue', width=2)
+
+            for s_site in self.storage_sites:
+                self.canvas.create_rectangle(s_site["x1"], s_site["y1"], s_site["x2"], s_site["y2"], outline='red', width=2)
+
+            for c_site in self.construction_sites:
+                self.canvas.create_rectangle(c_site["x1"], c_site["y1"], c_site["x2"], c_site["y2"], outline='#00FF7F', width=2)
 
     def save_coordinates(self):
         if self.storage_sites or self.construction_sites or self.roads:
-            # Create numpy arrays for rectangle coordinates and road lines
-            storage_site_coords = np.array([[rect["x1"], rect["y1"], rect["x2"], "y2"]
+            # Create numpy arrays for rectangle coordinates
+            storage_site_coords = np.array([[rect["x1"], rect["y1"], rect["x2"], rect["y2"]]
                                            for rect in self.storage_sites])
-            construction_site_coords = np.array([[rect["x1"], rect["y1"], rect["x2"], "y2"]
+            construction_site_coords = np.array([[rect["x1"], rect["y1"], rect["x2"], rect["y2"]]
                                                for rect in self.construction_sites])
             road_coords = np.array([[road["x1"], road["y1"], road["x2"], road["y2"]]
                                   for road in self.roads])

@@ -139,13 +139,33 @@ class DrawShapesApp(tk.Tk):
             shape_type = self.rect_type_var.get()
 
             if shape_type == "Roads":
-                self.roads.append({
+                new_road = {
                     "x1": x1,
                     "y1": y1,
                     "x2": x2,
                     "y2": y2,
-                })
-                self.canvas.create_line(x1, y1, x2, y2, fill='light blue', width=2)
+                }
+
+                # Define a threshold for how close points should be to be considered the same
+                threshold = 25  # Adjust this value as needed
+
+                for road in self.roads:
+                    for new_point, point in [((x1, y1), (road["x1"], road["y1"])),
+                                            ((x1, y1), (road["x2"], road["y2"])),
+                                            ((x2, y2), (road["x1"], road["y1"])),
+                                            ((x2, y2), (road["x2"], road["y2"]))]:
+                        # Calculate Euclidean distance
+                        distance = ((new_point[0] - point[0]) ** 2 + (new_point[1] - point[1]) ** 2) ** 0.5
+                        if distance < threshold:
+                            # Replace the new point with the existing point
+                            if new_point == (x1, y1):
+                                new_road["x1"], new_road["y1"] = point
+                            else:
+                                new_road["x2"], new_road["y2"] = point
+
+                self.roads.append(new_road)
+                self.canvas.create_line(new_road["x1"], new_road["y1"], new_road["x2"], new_road["y2"], fill='light blue', width=2)
+
             else:
                 outline_color = 'red' if shape_type == "Storage sites" else '#00FF7F'
                 if shape_type == "Storage sites":
@@ -164,6 +184,19 @@ class DrawShapesApp(tk.Tk):
                     })
 
                 self.canvas.create_rectangle(x1, y1, x2, y2, outline=outline_color, width=2)
+
+            # refresh the canvas: delete all items from the canvas
+            self.canvas.delete("all")
+
+            # refresh the canvas: redraw items
+            for road in self.roads:
+                self.canvas.create_line(road["x1"], road["y1"], road["x2"], road["y2"], fill='light blue', width=2)
+
+            for s_site in self.storage_sites:
+                self.canvas.create_rectangle(s_site["x1"], s_site["y1"], s_site["x2"], s_site["y2"], outline='red', width=2)
+
+            for c_site in self.construction_sites:
+                self.canvas.create_rectangle(c_site["x1"], c_site["y1"], c_site["x2"], c_site["y2"], outline='#00FF7F', width=2)
 
     def save_coordinates(self):
         if self.storage_sites or self.construction_sites or self.roads:
