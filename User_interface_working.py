@@ -87,26 +87,38 @@ class DrawShapesApp(tk.Tk):
             self.image = ImageTk.PhotoImage(resized_image)
 
             # Calculate the centered position
-            x_center = (current_width - new_width) // 2
-            y_center = (current_height - new_height) // 2
+            self.x_center = (current_width - new_width) // 2
+            self.y_center = (current_height - new_height) // 2
 
             # Clear canvas and draw the centered image
             self.canvas.delete("all")
-            self.image_id = self.canvas.create_image(x_center, y_center, anchor=tk.NW, image=self.image)
+            self.image_id = self.canvas.create_image(self.x_center, self.y_center, anchor=tk.NW, image=self.image)
 
             # Redraw previous shapes with correct colors and thickness
-            for rect in self.storage_sites:
+            for idx, rect in enumerate(self.storage_sites):
                 self.canvas.create_rectangle(
                     rect["x1"], rect["y1"], rect["x2"], rect["y2"], outline='red', width=4
                 )
-            for rect in self.construction_sites:
+                x_center = (rect["x1"] + rect["x2"]) / 2
+                y_center = (rect["y1"] + rect["y2"]) / 2
+                self.canvas.create_text(x_center, y_center, text=str(idx + 1), fill='red', font=('Helvetica 20 bold'))
+
+            for idx, rect in enumerate(self.construction_sites):
                 self.canvas.create_rectangle(
                     rect["x1"], rect["y1"], rect["x2"], rect["y2"], outline='#00FF7F', width=4
                 )
+                x_center = (rect["x1"] + rect["x2"]) / 2
+                y_center = (rect["y1"] + rect["y2"]) / 2
+                self.canvas.create_text(x_center, y_center, text=str(idx + 1), fill='#00FF7F', font=('Helvetica 20 bold'))
+            
+            dot_radius = 5
             for road in self.roads:
                 self.canvas.create_line(
                     road["x1"], road["y1"], road["x2"], road["y2"], fill='#42bff5', width=4
                 )
+                self.canvas.create_oval(road["x1"] - dot_radius, road["y1"] - dot_radius, road["x1"] + dot_radius, road["y1"] + dot_radius, fill='white', outline='black')
+                self.canvas.create_oval(road["x2"] - dot_radius, road["y2"] - dot_radius, road["x2"] + dot_radius, road["y2"] + dot_radius, fill='white', outline='black')
+                
 
     def on_resize(self, event):
         # Recalculate the image size and position upon window resizing
