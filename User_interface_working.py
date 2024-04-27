@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, Button
+from tkinter import filedialog, messagebox, Button, Toplevel, Label, Entry, Frame
 from PIL import Image, ImageTk
 import numpy as np
 import io
@@ -20,8 +20,8 @@ class DrawShapesApp(tk.Tk):
         self.load_button = tk.Button(self, text="Load Image", command=self.load_image)
         self.load_button.pack(side=tk.LEFT)
 
-        self.save_button = tk.Button(self, text="Save Coordinates", command=self.save_coordinates)
-        self.save_button.pack(side=tk.RIGHT)
+        # self.save_button = tk.Button(self, text="Save Coordinates", command=self.save_coordinates)
+        # self.save_button.pack(side=tk.RIGHT)
 
         # Rectangle/Line type selection
         self.rect_type_var = tk.StringVar(value="Storage sites")  # Default to Storage sites
@@ -52,9 +52,9 @@ class DrawShapesApp(tk.Tk):
         # Bind window resize event
         self.bind("<Configure>", self.on_resize)  # Handle resizing
 
-        # Add a "Save Image" button
-        save_image_button = Button(self, text="Save Image", command=self.save_image)
-        save_image_button.pack()
+        # Add a "Materials" button
+        materials_button = Button(self, text="Materials", command=self.open_materials_window)
+        materials_button.pack()
 
     def load_image(self):
         file_path = filedialog.askopenfilename(
@@ -102,19 +102,19 @@ class DrawShapesApp(tk.Tk):
             # Redraw previous shapes with correct colors and thickness
             for idx, rect in enumerate(self.storage_sites):
                 self.canvas.create_rectangle(
-                    rect["x1"], rect["y1"], rect["x2"], rect["y2"], outline='red', width=4
+                    rect["x1"], rect["y1"], rect["x2"], rect["y2"], outline='red', width=4, fill = 'white'
                 )
                 x_center = (rect["x1"] + rect["x2"]) / 2
                 y_center = (rect["y1"] + rect["y2"]) / 2
-                self.canvas.create_text(x_center, y_center, text=str(idx + 1), fill='red', font=('Helvetica 20 bold'))
+                self.canvas.create_text(x_center, y_center, text=str(idx + 1), fill='black', font=('Helvetica 20 bold'))
 
             for idx, rect in enumerate(self.construction_sites):
                 self.canvas.create_rectangle(
-                    rect["x1"], rect["y1"], rect["x2"], rect["y2"], outline='#00FF7F', width=4
+                    rect["x1"], rect["y1"], rect["x2"], rect["y2"], outline='#00FF7F', width=4, fill = 'white'
                 )
                 x_center = (rect["x1"] + rect["x2"]) / 2
                 y_center = (rect["y1"] + rect["y2"]) / 2
-                self.canvas.create_text(x_center, y_center, text=str(idx + 1), fill='#00FF7F', font=('Helvetica 20 bold'))
+                self.canvas.create_text(x_center, y_center, text=str(idx + 1), font=('Helvetica 20 bold'), fill='black')
             
             dot_radius = 5
             for road in self.roads:
@@ -243,13 +243,61 @@ class DrawShapesApp(tk.Tk):
         else:
             messagebox.showinfo("No Shapes", "No shapes to save.")
 
-    def save_image(self):
-        # Export the canvas contents to a PostScript file
-        ps = self.canvas.postscript(colormode='color')
+    def open_materials_window(self):
+        # Create a new window
+        self.materials_window = Toplevel(self)
 
-        # Use PIL to convert to PNG
-        img = Image.open(io.BytesIO(ps.encode('utf-8')))
-        img.save('canvas.png')
+        # Add a label and an entry for the number of materials
+        Label(self.materials_window, text="Number of materials:").pack()
+        self.materials_entry = Entry(self.materials_window)
+        self.materials_entry.pack()
+
+        # Add a "Submit" button
+        Button(self.materials_window, text="Submit", command=self.submit_materials).pack()
+
+    def submit_materials(self):
+        # Get the number of materials from the entry
+        self.num_materials = int(self.materials_entry.get())
+
+        # Close the materials window
+        self.materials_window.destroy()
+
+        # Open the sites window
+        self.open_sites_window()
+
+    def submit_sites(self):
+        # Get the materials for each site from the entries
+        self.site_materials = [entry.get() for entry in self.site_entries]
+
+        # Close the sites window
+        self.sites_window.destroy()
+
+    def open_sites_window(self):
+        # Create a new window
+        self.sites_window = Toplevel(self)
+
+        # Create a section for each construction site
+        for i in range(len(self.construction_sites)):
+            site_frame = Frame(self.sites_window)
+            site_frame.pack(fill='x', padx=5, pady=5)
+
+            Label(site_frame, text=f"Construction Site {i+1}").pack()
+
+            # Create an input form for each material in each section
+            self.site_entries = []
+            for j in range(self.num_materials):
+                material_frame = Frame(site_frame)
+                material_frame.pack(fill='x')
+
+                Label(material_frame, text=f"Material {j+1}:").pack(side='left')
+                entry = Entry(material_frame)
+                entry.pack(side='left')
+                self.site_entries.append(entry)
+
+        # Add a "Submit" button
+        Button(self.sites_window, text="Submit", command=self.submit_sites).pack()
+
+
 
 # Run the application
 if __name__ == "__main__":
