@@ -295,9 +295,18 @@ class DrawShapesApp(tk.Tk):
         self.open_materials_names_window()
 
     def submit_sites(self):
+        self.site_materials = np.zeros((len(self.construction_sites), self.num_materials))
         # Get the materials for each site from the entries
-        self.site_materials = [entry.get() for entry in self.site_entries]
+        for i in range(len(self.construction_sites)):
+            for j in range(self.num_materials):
+                # Get the quantity of the material at the site
+                quantity = float(self.site_entries[i][j].get())
 
+                # Add the quantity to the list for the material
+                self.site_materials[i,j] = quantity
+
+        print(self.site_materials)
+        
         # Close the sites window
         self.sites_window.destroy()
 
@@ -308,16 +317,15 @@ class DrawShapesApp(tk.Tk):
         # Create a title label
         Label(self.sites_window, text="Enter the amount of each material in metric tons").pack()
 
-
+        self.site_entries = []
         # Create a section for each construction site
         for i in range(len(self.construction_sites)):
             site_frame = Frame(self.sites_window)
             site_frame.pack(fill='x', padx=5, pady=5)
-
             Label(site_frame, text=f"Construction Site {i+1}").pack()
 
             # Create an input form for each material in each section
-            self.site_entries = []
+            self.site_entries_ind = []
             for j in range(self.num_materials):
                 material_frame = Frame(site_frame)
                 material_frame.pack(fill='x')
@@ -325,12 +333,12 @@ class DrawShapesApp(tk.Tk):
                 Label(material_frame, text=self.materials_names[j]).pack(side='left')
                 entry = Entry(material_frame)
                 entry.pack(side='right')
-                self.site_entries.append(entry)
+                self.site_entries_ind.append(entry)
+            
+            self.site_entries.append(self.site_entries_ind)
 
         # Add a "Submit" button
         Button(self.sites_window, text="Submit", command=self.submit_sites).pack()
-
-
 
 # Run the application
 if __name__ == "__main__":
