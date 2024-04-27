@@ -243,6 +243,35 @@ class DrawShapesApp(tk.Tk):
         else:
             messagebox.showinfo("No Shapes", "No shapes to save.")
 
+    def open_materials_names_window(self):
+        # Create a new window
+        self.materials_names_window = Toplevel(self)
+
+        # Create an input form for each material
+        self.materials_name_entries = []
+        for i in range(self.num_materials):
+            material_frame = Frame(self.materials_names_window)
+            material_frame.pack(fill='x')
+
+            Label(material_frame, text=f"Material {i+1}:").pack(side='left')
+            entry = Entry(material_frame)
+            entry.pack(side='left')
+            self.materials_name_entries.append(entry)
+
+        # Add a "Submit" button
+        Button(self.materials_names_window, text="Submit", command=self.submit_materials_names).pack()
+
+    def submit_materials_names(self):
+        # Get the names of the materials from the entries
+        self.materials_names = [entry.get() for entry in self.materials_name_entries]
+
+        # Close the materials names window
+        self.materials_names_window.destroy()
+
+        # Open the sites window
+        self.open_sites_window()
+        print(self.materials_names)
+
     def open_materials_window(self):
         # Create a new window
         self.materials_window = Toplevel(self)
@@ -262,8 +291,8 @@ class DrawShapesApp(tk.Tk):
         # Close the materials window
         self.materials_window.destroy()
 
-        # Open the sites window
-        self.open_sites_window()
+        # Open the materials names window
+        self.open_materials_names_window()
 
     def submit_sites(self):
         # Get the materials for each site from the entries
@@ -275,6 +304,10 @@ class DrawShapesApp(tk.Tk):
     def open_sites_window(self):
         # Create a new window
         self.sites_window = Toplevel(self)
+
+        # Create a title label
+        Label(self.sites_window, text="Enter the amount of each material in metric tons").pack()
+
 
         # Create a section for each construction site
         for i in range(len(self.construction_sites)):
@@ -289,9 +322,9 @@ class DrawShapesApp(tk.Tk):
                 material_frame = Frame(site_frame)
                 material_frame.pack(fill='x')
 
-                Label(material_frame, text=f"Material {j+1}:").pack(side='left')
+                Label(material_frame, text=self.materials_names[j]).pack(side='left')
                 entry = Entry(material_frame)
-                entry.pack(side='left')
+                entry.pack(side='right')
                 self.site_entries.append(entry)
 
         # Add a "Submit" button
