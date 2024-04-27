@@ -1,7 +1,8 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, Button
 from PIL import Image, ImageTk
 import numpy as np
+import io
 
 # Application class
 class DrawShapesApp(tk.Tk):
@@ -50,6 +51,10 @@ class DrawShapesApp(tk.Tk):
 
         # Bind window resize event
         self.bind("<Configure>", self.on_resize)  # Handle resizing
+
+        # Add a "Save Image" button
+        save_image_button = Button(self, text="Save Image", command=self.save_image)
+        save_image_button.pack()
 
     def load_image(self):
         file_path = filedialog.askopenfilename(
@@ -159,7 +164,7 @@ class DrawShapesApp(tk.Tk):
                 }
 
                 # Define a threshold for how close points should be to be considered the same
-                threshold = 25  # Adjust this value as needed
+                threshold = 15  # Adjust this value as needed
 
                 for road in self.roads:
                     for new_point, point in [((x1, y1), (road["x1"], road["y1"])),
@@ -237,6 +242,14 @@ class DrawShapesApp(tk.Tk):
 
         else:
             messagebox.showinfo("No Shapes", "No shapes to save.")
+
+    def save_image(self):
+        # Export the canvas contents to a PostScript file
+        ps = self.canvas.postscript(colormode='color')
+
+        # Use PIL to convert to PNG
+        img = Image.open(io.BytesIO(ps.encode('utf-8')))
+        img.save('canvas.png')
 
 # Run the application
 if __name__ == "__main__":
