@@ -115,7 +115,7 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
 
     # get the status
     status = plp.LpStatus[problem.status]
-    print(f"Status: {status}")
+    # print(f"Status: {status}")
 
 
     # # output the results
@@ -124,7 +124,7 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
 
 
     # Output the objective function value
-    print("Total Fuel Consumption =", plp.value(problem.objective))
+    # print("Total Fuel Consumption =", plp.value(problem.objective))
 
     materials_array = np.zeros((n, m, len(materials)))
     trips_array = np.zeros((n, m, len(materials)))
@@ -161,9 +161,10 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
 
     # print("Trips Array:")
     # print(trips_array)
-
-    for index in range(m):
-        print(f'Storage site {index+1} contains {materials_per_site[index, 0]} kg Earth, {materials_per_site[index, 1]} kg Steel, {materials_per_site[index, 2]} kg Concrete')
+    #   text = []
+    #   for index in range(m):
+    #       text.append(f'Storage site {index+1} contains {materials_per_site[index, 0]} kg Earth, {materials_per_site[index, 1]} kg Steel, {materials_per_site[index, 2]} kg Concrete')
+    #       print(f'Storage site {index+1} contains {materials_per_site[index, 0]} kg Earth, {materials_per_site[index, 1]} kg Steel, {materials_per_site[index, 2]} kg Concrete')
 
     return materials_per_site
 

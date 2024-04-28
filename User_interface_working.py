@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, Button, Toplevel, Label, Entry, Frame
+from tkinter import END, filedialog, messagebox, Button, Toplevel, Label, Entry, Frame
 from PIL import Image, ImageTk
 import numpy as np
 import math
@@ -247,12 +247,12 @@ class DrawShapesApp(tk.Tk):
                     ee_points_sorted = self.sort_list_by_first_element(ee_points)
                     ee_points_cut = ee_points_sorted[0:self.amount_of_ee_points]
 
-                    remove_indexes = []
-                    for ee_point in ee_points_cut:
-                        remove_indexes.append(ee_point[3])
+                    # remove_indexes = []
+                    # for ee_point in ee_points_cut:
+                    #     remove_indexes.append(ee_point[3])
 
-                    for index in sorted(remove_indexes, reverse=True):
-                        self.roads.pop(index)
+                    # for index in sorted(remove_indexes, reverse=True):
+                    #     self.roads.pop(index)
 
                     projected_points = []
                     for ee_point in ee_points_cut:
@@ -328,12 +328,12 @@ class DrawShapesApp(tk.Tk):
                     ee_points_sorted = self.sort_list_by_first_element(ee_points)
                     ee_points_cut = ee_points_sorted[0:self.amount_of_ee_points]
 
-                    remove_indexes = []
-                    for ee_point in ee_points_cut:
-                        remove_indexes.append(ee_point[3])
+                    # remove_indexes = []
+                    # for ee_point in ee_points_cut:
+                    #     remove_indexes.append(ee_point[3])
 
-                    for index in sorted(remove_indexes, reverse=True):
-                        self.roads.pop(index)
+                    # for index in sorted(remove_indexes, reverse=True):
+                    #     self.roads.pop(index)
 
                     projected_points = []
                     for ee_point in ee_points_cut:
@@ -556,9 +556,6 @@ class DrawShapesApp(tk.Tk):
         # Create a new window
         self.results_window = Toplevel(self)
 
-        # Add a label for the results
-        Label(self.results_window, text="The required amount of each material in kilograms").pack()
-
         # combine all (hidden) roads
         self.all_roads = self.roads + self.storage_sites_hidden_roads + self.construction_sites_hidden_roads
 
@@ -570,10 +567,41 @@ class DrawShapesApp(tk.Tk):
         storage_coordinates = np.array(self.storage_sites_centers)
         materials = self.materials_names
 
+        # Call the optimization tool
+        materials_per_site = optimization_tool(construction_coordinates, construction_sites_materials, storage_coordinates, materials, distances)
 
-        optimization_tool(construction_coordinates, construction_sites_materials, storage_coordinates, materials, distances)
-        
+        # Print the results
+        # print(materials_per_site)
 
+        # code for creating table
+        for i in range(materials_per_site.shape[0] + 1):
+            row_frame = tk.Frame(self.results_window)  # create a new frame for each row
+            row_frame.pack(fill='x')  # pack the frame into the parent widget
+
+            for j in range(materials_per_site.shape[1] + 1):
+                if i == 0 and not j == 0:
+                    e = tk.Entry(row_frame, width=20, fg='black',
+                                 font=('Arial',16,'bold'), bg='light grey', justify='center')
+                    e.pack(side='left')  # pack the entry into the row frame
+                    e.insert(tk.END, str(materials[j-1])+' [kg]')
+                
+                elif j == 0 and not i == 0:
+                    e = tk.Entry(row_frame, width=20, fg='black',
+                                 font=('Arial',16,'bold'), bg='light grey')
+                    e.pack(side='left')  # pack the entry into the row frame
+                    e.insert(tk.END, 'Storage site ' + str(i))
+
+                elif i == 0 and j == 0:
+                    e = tk.Entry(row_frame, width=20, fg='black',
+                                 font=('Arial',16,'bold'), bg='light grey')
+                    e.pack(side='left')  # pack the entry into the row frame
+                    e.insert(tk.END, '')
+                    
+                else:
+                    e = tk.Entry(row_frame, width=20, fg='black',
+                                 font=('Arial',16), justify='center')
+                    e.pack(side='left')  # pack the entry into the row frame
+                    e.insert(tk.END, str(materials_per_site[i-1][j-1]))
 
 
 # Run the application
