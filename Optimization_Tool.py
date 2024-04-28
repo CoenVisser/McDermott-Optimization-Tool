@@ -1,12 +1,8 @@
 import numpy as np
-from scipy.spatial.distance import cdist
-from math import ceil
-
 from Extensions import vehicle
-
 import pulp as plp
 
-def optimization_tool(construction_coordinates, construction_sites_materials, storage_coordinates, materials, distances, max_storage_possible=10000):
+def optimization_tool(construction_coordinates, construction_sites_materials, storage_coordinates, materials, distances, vehicles, max_sites, max_storage_possible=10000):
 
     # materials = ['Earth', 'Steel', 'Concrete'] 
 
@@ -45,11 +41,6 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
     required_materials = {(i, materials[k]): construction_sites_materials[i-1, k] for i in range(1, n + 1) for k in range(len(materials))}
 
     # vehicle setup
-    earth_truck = vehicle(fuel_consumption=9.5, speed=10, material='Earth', capacity=700)
-    steel_truck = vehicle(fuel_consumption=4.5, speed=10, material='Steel', capacity=300)
-    concrete_truck = vehicle(fuel_consumption=6.5, speed=10, material='Concrete', capacity=400)
-
-    vehicles = [earth_truck, steel_truck, concrete_truck]
     vehicle_capacity = {materials[k]: vehicles[k].capacity for k in range(nr_mat)}
     fuel_rate = {materials[k]: vehicles[k].fuel_consumption_per_meter for k in range(nr_mat)}
 
@@ -83,12 +74,13 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
     ##
     ## Constraint: Each storage site has either at least 30% or none of a given material
     BigM = 10000  # Large number for Big M constraint
+    min_fraction = 1 / float(max_sites)  # Minimum fraction of material at each storage site
 
     # Constraint for each material in each storage site
     for j in range(1, m + 1):
         for idx, k in enumerate(materials):
             # If y is 1, the storage site must hold at least 30% of the total required
-            problem += plp.lpSum(q[(i, j, k)] for i in range(1, n + 1)) >= 0.333 * mat_required[idx] * y[(j, k)], f"Min_30_{j}_{k}"
+            problem += plp.lpSum(q[(i, j, k)] for i in range(1, n + 1)) >= min_fraction * mat_required[idx] * y[(j, k)], f"Min_30_{j}_{k}"
 
             # If y is 0, the storage site holds none of the material
             problem += plp.lpSum(q[(i, j, k)] for i in range(1, n + 1)) <= BigM * y[(j, k)], f"Max_0_{j}_{k}"

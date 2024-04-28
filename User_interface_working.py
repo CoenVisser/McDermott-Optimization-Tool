@@ -5,6 +5,7 @@ import numpy as np
 import math
 from Distance_calculation import Dijkstra_algorithm
 from Optimization_Tool import optimization_tool
+from Extensions import vehicle
 
 # Application class
 class DrawShapesApp(tk.Tk):
@@ -27,6 +28,8 @@ class DrawShapesApp(tk.Tk):
         self.image = None
         self.original_image = None  # Store the original image for resizing
         self.image_id = None
+
+        self.vehicle_property_names = ['Fuel consumption [L/h]', 'Speed [km/h]', 'Capacity [kg]']
 
         self.storage_sites = []  # Rectangles for storage sites
         self.construction_sites = []  # Rectangles for construction sites
@@ -442,16 +445,32 @@ class DrawShapesApp(tk.Tk):
         self.materials_names_window.destroy()
 
         # Open the sites window
-        self.open_sites_window()
+        self.open_vehicles_window()
 
     def open_materials_window(self):
         # Create a new window
         self.materials_window = Toplevel(self)
 
         # Add a label and an entry for the number of materials
-        Label(self.materials_window, text="Number of materials:").pack()
-        self.materials_entry = Entry(self.materials_window)
-        self.materials_entry.pack()
+        frame1 = tk.Frame(self.materials_window)
+        frame1.pack(fill='x')
+        Label(frame1, text="Number of materials:").pack(side='left')
+        self.materials_entry = Entry(frame1)
+        self.materials_entry.pack(side='right')
+
+        # Add a label and an entry for the maximum number of sites a material may be spread over
+        frame2 = tk.Frame(self.materials_window)
+        frame2.pack(fill='x')
+        Label(frame2, text="Maximum number of sites a material may be spread over:").pack(side='left')
+        self.max_sites_entry = Entry(frame2)
+        self.max_sites_entry.pack(side='right')
+
+        # Add a label and an entry for the maximum materials that can be stored at a storage site
+        frame3 = tk.Frame(self.materials_window)
+        frame3.pack(fill='x')
+        Label(frame3, text="Maximum materials that can be stored at a storage site in kilograms:").pack(side='left')
+        self.max_storage_possible_entry = Entry(frame3)
+        self.max_storage_possible_entry.pack(side='right')
 
         # Add a "Submit" button
         Button(self.materials_window, text="Submit", command=self.submit_materials).pack()
@@ -459,6 +478,12 @@ class DrawShapesApp(tk.Tk):
     def submit_materials(self):
         # Get the number of materials from the entry
         self.num_materials = int(self.materials_entry.get())
+
+        # Get the maximum number of sites a material may be spread over
+        self.max_sites = int(self.max_sites_entry.get())
+
+        # Get the maximum materials that can be stored at a storage site
+        self.max_storage_possible = int(self.max_storage_possible_entry.get())
 
         # Close the materials window
         self.materials_window.destroy()
@@ -566,9 +591,12 @@ class DrawShapesApp(tk.Tk):
         construction_sites_materials = np.array(self.site_materials) * 1000  # tons to kg
         storage_coordinates = np.array(self.storage_sites_centers)
         materials = self.materials_names
+        vehicles = self.vehicles
+        max_sites = self.max_sites
+        max_storage_possible = self.max_storage_possible
 
         # Call the optimization tool
-        materials_per_site = optimization_tool(construction_coordinates, construction_sites_materials, storage_coordinates, materials, distances)
+        materials_per_site = optimization_tool(construction_coordinates=construction_coordinates, construction_sites_materials=construction_sites_materials, storage_coordinates=storage_coordinates, materials=materials, distances=distances, vehicles=vehicles, max_sites=max_sites, max_storage_possible=max_storage_possible)
 
         # Print the results
         # print(materials_per_site)
@@ -603,6 +631,55 @@ class DrawShapesApp(tk.Tk):
                     e.pack(side='left')  # pack the entry into the row frame
                     e.insert(tk.END, str(materials_per_site[i-1][j-1]))
 
+    def open_vehicles_window(self):
+        # create a new window
+        self.vehicle_window = Toplevel(self)
+
+        # Create a title label
+        Label(self.vehicle_window, text="Enter the properties of each vehicle").pack()
+
+        self.vehicle_entries = []
+
+        # Create a section for each material
+        for i in range(self.num_materials):
+            vehicle_frame = Frame(self.vehicle_window)
+            vehicle_frame.pack(fill='x', padx=5, pady=5)
+            Label(vehicle_frame, text=f"{self.materials_names[i]} vehicle").pack()
+
+            # Create an input form for each property of the vehicle
+            self.vehicle_entries_ind = []
+            for j in range(3):
+                property_frame = Frame(vehicle_frame)
+                property_frame.pack(fill='x')
+
+                Label(property_frame, text=self.vehicle_property_names[j]).pack(side='left')
+                entry = Entry(property_frame)
+                entry.pack(side='right')
+                self.vehicle_entries_ind.append(entry)
+            
+            self.vehicle_entries.append(self.vehicle_entries_ind)
+
+        # Add a "Submit" button
+        Button(self.vehicle_window, text="Submit", command=self.submit_vehicles).pack()
+    
+    def submit_vehicles(self):
+        self.vehicle_properties = np.zeros((self.num_materials, len(self.vehicle_property_names)))
+
+        self.vehicles = []
+
+        # Get the materials for each site from the entries
+        for i in range(self.num_materials):
+            material_vehicle = vehicle(fuel_consumption=float(self.vehicle_entries[i][0].get()), speed=float(self.vehicle_entries[i][1].get()), material=self.materials_names[i], capacity=float(self.vehicle_entries[i][2].get()))
+            self.vehicles.append(material_vehicle)
+
+        # Close the sites window
+        self.vehicle_window.destroy()
+
+        # Open the sites window
+        self.open_sites_window()
+
+
+       
 
 # Run the application
 if __name__ == "__main__":
