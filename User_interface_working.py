@@ -3,6 +3,8 @@ from tkinter import filedialog, messagebox, Button, Toplevel, Label, Entry, Fram
 from PIL import Image, ImageTk
 import numpy as np
 import math
+from Distance_calculation import Dijkstra_algorithm
+from Optimization_Tool import optimization_tool
 
 # Application class
 class DrawShapesApp(tk.Tk):
@@ -250,7 +252,7 @@ class DrawShapesApp(tk.Tk):
                         remove_indexes.append(ee_point[3])
 
                     for index in sorted(remove_indexes, reverse=True):
-                        del self.roads[index]
+                        self.roads.pop(index)
 
                     projected_points = []
                     for ee_point in ee_points_cut:
@@ -331,7 +333,7 @@ class DrawShapesApp(tk.Tk):
                         remove_indexes.append(ee_point[3])
 
                     for index in sorted(remove_indexes, reverse=True):
-                        del self.roads[index]
+                        self.roads.pop(index)
 
                     projected_points = []
                     for ee_point in ee_points_cut:
@@ -441,7 +443,6 @@ class DrawShapesApp(tk.Tk):
 
         # Open the sites window
         self.open_sites_window()
-        print(self.materials_names)
 
     def open_materials_window(self):
         # Create a new window
@@ -475,11 +476,12 @@ class DrawShapesApp(tk.Tk):
 
                 # Add the quantity to the list for the material
                 self.site_materials[i,j] = quantity
-
-        print(self.site_materials)
         
         # Close the sites window
         self.sites_window.destroy()
+
+        # Open the results window
+        self.open_results_window()
 
     def open_sites_window(self):
         # Create a new window
@@ -550,8 +552,30 @@ class DrawShapesApp(tk.Tk):
     def sort_list_by_first_element(self, lst):
         return sorted(lst, key=lambda sublist: sublist[0])
 
+    def open_results_window(self):
+        # Create a new window
+        self.results_window = Toplevel(self)
 
-    
+        # Add a label for the results
+        Label(self.results_window, text="The required amount of each material in kilograms").pack()
+
+        # combine all (hidden) roads
+        self.all_roads = self.roads + self.storage_sites_hidden_roads + self.construction_sites_hidden_roads
+
+        # Determine the distance between each construction site and storage site
+        distances = Dijkstra_algorithm(self.all_roads, self.construction_sites_centers, self.storage_sites_centers, 1)
+
+        construction_coordinates = np.array(self.construction_sites_centers)  
+        construction_sites_materials = np.array(self.site_materials) * 1000  # tons to kg
+        storage_coordinates = np.array(self.storage_sites_centers)
+        materials = self.materials_names
+
+
+        optimization_tool(construction_coordinates, construction_sites_materials, storage_coordinates, materials, distances)
+        
+
+
+
 # Run the application
 if __name__ == "__main__":
     app = DrawShapesApp()

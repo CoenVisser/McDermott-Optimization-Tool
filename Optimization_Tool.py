@@ -6,10 +6,9 @@ from Extensions import vehicle
 
 import pulp as plp
 
-def optimization_tool(construction_coordinates, construction_sites_materials, storage_coordinates, max_storage_capacity, scale=100):
-    scale = 100
+def optimization_tool(construction_coordinates, construction_sites_materials, storage_coordinates, materials, distances, max_storage_possible=10000):
 
-    materials = ['Earth', 'Steel', 'Concrete'] 
+    # materials = ['Earth', 'Steel', 'Concrete'] 
 
     # construction sites - information
     # construction_coordinates = np.array([[0, 0],
@@ -34,8 +33,8 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
     #                                 [2, 3],
     #                                 [3, 5]])
 
-    # max_storage_possible = 10000
-    # max_storage_capacity = np.ones((storage_coordinates.shape[0], 1)) * max_storage_possible
+    max_storage_possible = 10000
+    max_storage_capacity = np.ones((storage_coordinates.shape[0], 1)) * max_storage_possible
 
     # materials setup
     n = construction_coordinates.shape[0]   # number of buildings
@@ -44,21 +43,6 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
     mat_required = np.sum(construction_sites_materials, axis=0)
 
     required_materials = {(i, materials[k]): construction_sites_materials[i-1, k] for i in range(1, n + 1) for k in range(len(materials))}
-
-
-    # storage distribution
-    # tot_storage_requirement = np.sum(construction_sites_materials)
-    # print(tot_storage_requirement)
-
-
-
-
-    # distance determination
-    distance_matrix = cdist(storage_coordinates, construction_coordinates) * scale
-    distances = {(j, i): distance_matrix[j-1,i-1] for j in range(1, storage_coordinates.shape[0] + 1) for i in range(1, construction_coordinates.shape[0] + 1)}
-
-
-
 
     # vehicle setup
     earth_truck = vehicle(fuel_consumption=9.5, speed=10, material='Earth', capacity=700)
@@ -122,7 +106,7 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
 
 
     # add objective function
-    problem += plp.lpSum(t[(i, j, k)] * 2 * distances[(j, i)] * fuel_rate[k] for i in range(1, n + 1) for j in range(1, m + 1) for k in materials)
+    problem += plp.lpSum(t[(i, j, k)] * 2 * distances[(j-1, i-1)] * fuel_rate[k] for i in range(1, n + 1) for j in range(1, m + 1) for k in materials)
 
 
     # solve the problem
