@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, Button, Toplevel, Label, Entry, Frame
 from PIL import Image, ImageTk
 import numpy as np
-import io
+import math
 
 # Application class
 class DrawShapesApp(tk.Tk):
@@ -16,31 +16,28 @@ class DrawShapesApp(tk.Tk):
         self.canvas = tk.Canvas(self, bg='white', width=self.canvas_width, height=self.canvas_height)
         self.canvas.pack(expand=True, fill=tk.BOTH)
 
-        # Buttons for loading image and saving data
-        self.load_button = tk.Button(self, text="Load Image", command=self.load_image)
-        self.load_button.pack(side=tk.LEFT)
+        
 
         # self.save_button = tk.Button(self, text="Save Coordinates", command=self.save_coordinates)
         # self.save_button.pack(side=tk.RIGHT)
-
-        # Rectangle/Line type selection
-        self.rect_type_var = tk.StringVar(value="Storage sites")  # Default to Storage sites
-        self.rect_type_menu = tk.OptionMenu(
-            self,
-            self.rect_type_var,
-            "Storage sites",  # Red rectangles
-            "Construction sites",  # Green rectangles
-            "Roads"  # Light blue lines
-        )
-        self.rect_type_menu.pack(side=tk.LEFT)
 
         # Variables for drawing shapes
         self.image = None
         self.original_image = None  # Store the original image for resizing
         self.image_id = None
+
         self.storage_sites = []  # Rectangles for storage sites
         self.construction_sites = []  # Rectangles for construction sites
         self.roads = []  # Lines for roads
+
+        self.storage_sites_centers = []  # storage sites centers
+        self.construction_sites_centers = []  # construction sites centers
+
+        self.storage_sites_ee_points = []  # storage sites entry/exit points
+        self.construction_sites_ee_points = []  # construction sites entry/exit points
+
+        self.amount_of_ee_points = 2
+
         self.current_shape = []
         self.drawing = False
 
@@ -52,9 +49,24 @@ class DrawShapesApp(tk.Tk):
         # Bind window resize event
         self.bind("<Configure>", self.on_resize)  # Handle resizing
 
+        # Buttons for loading image and saving data
+        self.load_button = tk.Button(self, text="Load Image", command=self.load_image)
+        self.load_button.pack(side=tk.LEFT)
+
         # Add a "Materials" button
-        materials_button = Button(self, text="Materials", command=self.open_materials_window)
-        materials_button.pack()
+        materials_button = Button(self, text="Specify Materials", command=self.open_materials_window)
+        materials_button.pack(side=tk.RIGHT)
+
+        # Rectangle/Line type selection
+        self.rect_type_var = tk.StringVar(value="Roads")  # Default to Storage sites
+        self.rect_type_menu = tk.OptionMenu(
+            self,
+            self.rect_type_var,
+            "Storage sites",  # Red rectangles
+            "Construction sites",  # Green rectangles
+            "Roads"  # Light blue lines
+        )
+        self.rect_type_menu.pack(side=tk.LEFT)
 
     def load_image(self):
         file_path = filedialog.askopenfilename(
@@ -100,6 +112,7 @@ class DrawShapesApp(tk.Tk):
             self.image_id = self.canvas.create_image(self.x_center, self.y_center, anchor=tk.NW, image=self.image)
 
             # Redraw previous shapes with correct colors and thickness
+            
             for idx, rect in enumerate(self.storage_sites):
                 self.canvas.create_rectangle(
                     rect["x1"], rect["y1"], rect["x2"], rect["y2"], outline='red', width=4, fill = 'white'
@@ -107,6 +120,10 @@ class DrawShapesApp(tk.Tk):
                 x_center = (rect["x1"] + rect["x2"]) / 2
                 y_center = (rect["y1"] + rect["y2"]) / 2
                 self.canvas.create_text(x_center, y_center, text=str(idx + 1), fill='black', font=('Helvetica 20 bold'))
+                dot_radius = 3
+                for k in range(4):
+                    self.canvas.create_oval(self.storage_sites_ee_points[idx][k][0] - dot_radius, self.storage_sites_ee_points[idx][k][1] - dot_radius, self.storage_sites_ee_points[idx][k][0] + dot_radius, self.storage_sites_ee_points[idx][k][1] + dot_radius, fill='white', outline='red')
+
 
             for idx, rect in enumerate(self.construction_sites):
                 self.canvas.create_rectangle(
@@ -115,6 +132,9 @@ class DrawShapesApp(tk.Tk):
                 x_center = (rect["x1"] + rect["x2"]) / 2
                 y_center = (rect["y1"] + rect["y2"]) / 2
                 self.canvas.create_text(x_center, y_center, text=str(idx + 1), font=('Helvetica 20 bold'), fill='black')
+                dot_radius = 3
+                for k in range(4):
+                    self.canvas.create_oval(self.construction_sites_ee_points[idx][k][0] - dot_radius, self.construction_sites_ee_points[idx][k][1] - dot_radius, self.construction_sites_ee_points[idx][k][0] + dot_radius, self.construction_sites_ee_points[idx][k][1] + dot_radius, fill='white', outline='#00FF7F')
             
             dot_radius = 5
             for road in self.roads:
@@ -123,7 +143,6 @@ class DrawShapesApp(tk.Tk):
                 )
                 self.canvas.create_oval(road["x1"] - dot_radius, road["y1"] - dot_radius, road["x1"] + dot_radius, road["y1"] + dot_radius, fill='white', outline='black')
                 self.canvas.create_oval(road["x2"] - dot_radius, road["y2"] - dot_radius, road["x2"] + dot_radius, road["y2"] + dot_radius, fill='white', outline='black')
-                
 
     def on_resize(self, event):
         # Recalculate the image size and position upon window resizing
@@ -192,6 +211,66 @@ class DrawShapesApp(tk.Tk):
                         "x2": x2,
                         "y2": y2,
                     })
+                    self.storage_sites_centers.append(((x1 + x2) / 2, (y1 + y2) / 2))
+                    self.storage_sites_ee_points.append([((x1 + x2) / 2, y1), ((x1 + x2) / 2, y2), (x1, (y1 + y2) / 2), (x2, (y1 + y2) / 2)])
+
+                    distances = []
+                    for ee_point in self.storage_sites_ee_points[-1]:
+                        ee_point_distances = []
+                        for road in self.roads:
+                            line = [road["x1"], road["y1"], road["x2"], road["y2"]]
+                            ee_point_distances.append(self.distance_point_line(ee_point, line))
+                        distances.append(ee_point_distances)
+
+                    
+                    ee_points = []
+                    for ee_idx, ee_point_road_dist in enumerate(distances):
+                        # for each point make a list containing the distance to each road and the coordinates of the road vertices
+                        ee_point = self.storage_sites_ee_points[-1][ee_idx]
+                        ee_road_dict_list = []
+
+                        for idx, road in enumerate(ee_point_road_dist):
+                            line = [self.roads[idx]["x1"], self.roads[idx]["y1"], self.roads[idx]["x2"], self.roads[idx]["y2"]]
+                            ee_road_dict_list.append([road, line, self.storage_sites_ee_points[-1][ee_idx], idx])
+
+                        ee_road_dict_list_sorted = self.sort_list_by_first_element(ee_road_dict_list)
+                        closest_road = ee_road_dict_list_sorted[0]
+                        ee_points.append(closest_road)
+
+                    ee_points_sorted = self.sort_list_by_first_element(ee_points)
+                    ee_points_cut = ee_points_sorted[0:self.amount_of_ee_points]
+
+
+                    projected_points = []
+                    for ee_point in ee_points_cut:
+                        projected_points.append(self.project_point_onto_line(ee_point[2], ee_point[1]))
+                        self.roads.pop(ee_point[3])
+
+                        ee_main_road = {
+                            "x1": projected_points[-1][0],
+                            "y1": projected_points[-1][1],
+                            "x2": ee_point[2][0],
+                            "y2": ee_point[2][1],
+                        }
+                        self.roads.append(ee_main_road)
+
+                        ee_first_road = {
+                            "x1": projected_points[-1][0],
+                            "y1": projected_points[-1][1],
+                            "x2": ee_point[1][0],
+                            "y2": ee_point[1][1],
+                        }
+                        self.roads.append(ee_first_road)
+
+                        ee_second_road = {
+                            "x1": projected_points[-1][0],
+                            "y1": projected_points[-1][1],
+                            "x2": ee_point[1][2],
+                            "y2": ee_point[1][3],
+                        }
+                        self.roads.append(ee_second_road)
+
+
                 elif shape_type == "Construction sites":
                     self.construction_sites.append({
                         "x1": x1,
@@ -199,8 +278,67 @@ class DrawShapesApp(tk.Tk):
                         "x2": x2,
                         "y2": y2,
                     })
+                    self.construction_sites_centers.append(((x1 + x2) / 2, (y1 + y2) / 2))
+                    self.construction_sites_ee_points.append([((x1 + x2) / 2, y1), ((x1 + x2) / 2, y2), (x1, (y1 + y2) / 2), (x2, (y1 + y2) / 2)])
 
-                self.canvas.create_rectangle(x1, y1, x2, y2, outline=outline_color, width=4)
+                    distances = []
+                    for ee_point in self.construction_sites_ee_points[-1]:
+                        ee_point_distances = []
+                        for road in self.roads:
+                            line = [road["x1"], road["y1"], road["x2"], road["y2"]]
+                            ee_point_distances.append(self.distance_point_line(ee_point, line))
+                        distances.append(ee_point_distances)
+
+                    
+                    ee_points = []
+                    for ee_idx, ee_point_road_dist in enumerate(distances):
+                        # for each point make a list containing the distance to each road and the coordinates of the road vertices
+                        ee_point = self.construction_sites_ee_points[-1][ee_idx]
+                        ee_road_dict_list = []
+
+                        for idx, road in enumerate(ee_point_road_dist):
+                            line = [self.roads[idx]["x1"], self.roads[idx]["y1"], self.roads[idx]["x2"], self.roads[idx]["y2"]]
+                            ee_road_dict_list.append([road, line, self.construction_sites_ee_points[-1][ee_idx], idx])
+
+                        ee_road_dict_list_sorted = self.sort_list_by_first_element(ee_road_dict_list)
+                        closest_road = ee_road_dict_list_sorted[0]
+                        ee_points.append(closest_road)
+
+                    ee_points_sorted = self.sort_list_by_first_element(ee_points)
+                    ee_points_cut = ee_points_sorted[0:self.amount_of_ee_points]
+
+
+                    projected_points = []
+                    for ee_point in ee_points_cut:
+                        projected_points.append(self.project_point_onto_line(ee_point[2], ee_point[1]))
+                        self.roads.pop(ee_point[3])
+
+                        ee_main_road = {
+                            "x1": projected_points[-1][0],
+                            "y1": projected_points[-1][1],
+                            "x2": ee_point[2][0],
+                            "y2": ee_point[2][1],
+                        }
+                        self.roads.append(ee_main_road)
+
+                        ee_first_road = {
+                            "x1": projected_points[-1][0],
+                            "y1": projected_points[-1][1],
+                            "x2": ee_point[1][0],
+                            "y2": ee_point[1][1],
+                        }
+                        self.roads.append(ee_first_road)
+
+                        ee_second_road = {
+                            "x1": projected_points[-1][0],
+                            "y1": projected_points[-1][1],
+                            "x2": ee_point[1][2],
+                            "y2": ee_point[1][3],
+                        }
+                        self.roads.append(ee_second_road)
+
+                    self.canvas.create_rectangle(x1, y1, x2, y2, outline=outline_color, width=4)
+
 
             # refresh the canvas
             self.update_image_display()
@@ -339,6 +477,46 @@ class DrawShapesApp(tk.Tk):
 
         # Add a "Submit" button
         Button(self.sites_window, text="Submit", command=self.submit_sites).pack()
+
+    def distance_point_line(self, point, line):
+        x0, y0 = point
+        x1, y1, x2, y2 = line
+
+        # Calculate the distance from the point to the line defined by the two points
+        numerator = abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
+        denominator = math.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2)
+        distance_to_line = numerator / denominator
+
+        # Check if the perpendicular from the point to the line falls within the line segment
+        dotproduct = (x0 - x1) * (x2 - x1) + (y0 - y1) * (y2 - y1)
+        length_squared = (x2 - x1) ** 2 + (y2 - y1) ** 2
+
+        if dotproduct < 0 or dotproduct > length_squared:
+            # The perpendicular does not fall within the line segment, return the minimum distance to either point
+            return min(math.sqrt((x0 - x1) ** 2 + (y0 - y1) ** 2), math.sqrt((x0 - x2) ** 2 + (y0 - y2) ** 2))
+        else:
+            # The perpendicular falls within the line segment, return the distance to the line
+            return distance_to_line
+
+    def project_point_onto_line(self, point, line):
+        x0, y0 = point
+        x1, y1, x2, y2 = line
+
+        # Calculate the vectors
+        line_vector = [x2 - x1, y2 - y1]
+        point_vector = [x0 - x1, y0 - y1]
+
+        # Calculate the proportion along the line that the projection falls
+        proportion = (point_vector[0] * line_vector[0] + point_vector[1] * line_vector[1]) / (line_vector[0] ** 2 + line_vector[1] ** 2)
+
+        # Calculate the coordinates of the projection
+        projection = [x1 + proportion * line_vector[0], y1 + proportion * line_vector[1]]
+
+        return projection
+
+    def sort_list_by_first_element(self, lst):
+        return sorted(lst, key=lambda sublist: sublist[0])
+
 
 # Run the application
 if __name__ == "__main__":
