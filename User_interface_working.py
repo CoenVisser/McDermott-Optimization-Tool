@@ -33,8 +33,14 @@ class DrawShapesApp(tk.Tk):
         self.storage_sites_centers = []  # storage sites centers
         self.construction_sites_centers = []  # construction sites centers
 
-        self.storage_sites_ee_points = []  # storage sites entry/exit points
-        self.construction_sites_ee_points = []  # construction sites entry/exit points
+        self.storage_sites_ee_points = []   # storage sites possible entry/exit points
+        self.construction_sites_ee_points = []  # construction sites possible entry/exit points
+
+        self.storage_sites_ee_points_selected = []
+        self.construction_sites_ee_points_selected = []
+
+        self.storage_sites_hidden_roads = []   # storage sites entry/exit points
+        self.construction_sites_hidden_roads = []  # storage sites entry/exit points
 
         self.amount_of_ee_points = 2
 
@@ -123,7 +129,6 @@ class DrawShapesApp(tk.Tk):
                 dot_radius = 3
                 for k in range(4):
                     self.canvas.create_oval(self.storage_sites_ee_points[idx][k][0] - dot_radius, self.storage_sites_ee_points[idx][k][1] - dot_radius, self.storage_sites_ee_points[idx][k][0] + dot_radius, self.storage_sites_ee_points[idx][k][1] + dot_radius, fill='white', outline='red')
-
 
             for idx, rect in enumerate(self.construction_sites):
                 self.canvas.create_rectangle(
@@ -240,11 +245,16 @@ class DrawShapesApp(tk.Tk):
                     ee_points_sorted = self.sort_list_by_first_element(ee_points)
                     ee_points_cut = ee_points_sorted[0:self.amount_of_ee_points]
 
+                    remove_indexes = []
+                    for ee_point in ee_points_cut:
+                        remove_indexes.append(ee_point[3])
+
+                    for index in sorted(remove_indexes, reverse=True):
+                        del self.roads[index]
 
                     projected_points = []
                     for ee_point in ee_points_cut:
                         projected_points.append(self.project_point_onto_line(ee_point[2], ee_point[1]))
-                        self.roads.pop(ee_point[3])
 
                         ee_main_road = {
                             "x1": projected_points[-1][0],
@@ -269,6 +279,15 @@ class DrawShapesApp(tk.Tk):
                             "y2": ee_point[1][3],
                         }
                         self.roads.append(ee_second_road)
+
+                        hidden_road = {
+                            "x1": self.storage_sites_centers[-1][0],
+                            "y1": self.storage_sites_centers[-1][1],
+                            "x2": ee_point[2][0],
+                            "y2": ee_point[2][1],
+                        }
+
+                        self.storage_sites_hidden_roads.append(hidden_road)
 
 
                 elif shape_type == "Construction sites":
@@ -307,11 +326,16 @@ class DrawShapesApp(tk.Tk):
                     ee_points_sorted = self.sort_list_by_first_element(ee_points)
                     ee_points_cut = ee_points_sorted[0:self.amount_of_ee_points]
 
+                    remove_indexes = []
+                    for ee_point in ee_points_cut:
+                        remove_indexes.append(ee_point[3])
+
+                    for index in sorted(remove_indexes, reverse=True):
+                        del self.roads[index]
 
                     projected_points = []
                     for ee_point in ee_points_cut:
                         projected_points.append(self.project_point_onto_line(ee_point[2], ee_point[1]))
-                        self.roads.pop(ee_point[3])
 
                         ee_main_road = {
                             "x1": projected_points[-1][0],
@@ -336,6 +360,15 @@ class DrawShapesApp(tk.Tk):
                             "y2": ee_point[1][3],
                         }
                         self.roads.append(ee_second_road)
+
+                        hidden_road = {
+                            "x1": self.construction_sites_centers[-1][0],
+                            "y1": self.construction_sites_centers[-1][1],
+                            "x2": ee_point[2][0],
+                            "y2": ee_point[2][1],
+                        }
+
+                        self.construction_sites_hidden_roads.append(hidden_road)
 
                     self.canvas.create_rectangle(x1, y1, x2, y2, outline=outline_color, width=4)
 
@@ -518,6 +551,7 @@ class DrawShapesApp(tk.Tk):
         return sorted(lst, key=lambda sublist: sublist[0])
 
 
+    
 # Run the application
 if __name__ == "__main__":
     app = DrawShapesApp()
