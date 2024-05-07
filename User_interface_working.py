@@ -68,7 +68,7 @@ class DrawShapesApp(tk.Tk):
         self.load_button.pack(side=tk.LEFT)
 
         # Add a "Materials" button
-        materials_button = Button(self, text="Specify Materials and Scale", command=self.open_materials_window)
+        materials_button = Button(self, text="1. Specify Materials and Scale", command=self.open_materials_window)
         materials_button.pack(side=tk.RIGHT)
 
         # Rectangle/Line type selection
@@ -511,7 +511,7 @@ class DrawShapesApp(tk.Tk):
         # Add a label and an entry for the maximum materials that can be stored at a storage site
         frame3 = tk.Frame(self.materials_window)
         frame3.pack(fill='x')
-        Label(frame3, text="Maximum materials that can be stored at a storage site in kilograms:").pack(side='left')
+        Label(frame3, text="Maximum materials that can be stored at a storage site in metric tons:").pack(side='left')
         self.max_storage_possible_entry = Entry(frame3)
         self.max_storage_possible_entry.pack(side='right')
 
@@ -529,7 +529,7 @@ class DrawShapesApp(tk.Tk):
         self.max_sites = int(self.max_sites_entry.get())
 
         # Get the maximum materials that can be stored at a storage site
-        self.max_storage_possible = int(self.max_storage_possible_entry.get())
+        self.max_storage_possible = 1000 * int(self.max_storage_possible_entry.get())
 
         # Close the materials window
         self.materials_window.destroy()
