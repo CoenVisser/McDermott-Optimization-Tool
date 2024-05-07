@@ -26,7 +26,9 @@ def Dijkstra_algorithm(roads, construction_sites_coords, storage_sites_coords, s
 
         distance_matrix_list.append(storage_site_distances)
 
-    distance_matrix = np.array(distance_matrix_list)
+    distance_matrix_no_scale = np.array(distance_matrix_list)
+
+    distance_matrix = distance_matrix_no_scale * scale
 
 
     return distance_matrix

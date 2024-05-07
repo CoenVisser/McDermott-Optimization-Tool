@@ -34,6 +34,7 @@ class DrawShapesApp(tk.Tk):
         self.storage_sites = []  # Rectangles for storage sites
         self.construction_sites = []  # Rectangles for construction sites
         self.roads = []  # Lines for roads
+        self.scale_line = []  # Line for scale
 
         self.storage_sites_centers = []  # storage sites centers
         self.construction_sites_centers = []  # construction sites centers
@@ -52,6 +53,8 @@ class DrawShapesApp(tk.Tk):
         self.current_shape = []
         self.drawing = False
 
+        self.scale = 1   # scale in m per pixel
+
         # Bind mouse events for drawing
         self.canvas.bind("<Button-1>", self.start_draw)
         self.canvas.bind("<B1-Motion>", self.drawing_motion)
@@ -65,7 +68,7 @@ class DrawShapesApp(tk.Tk):
         self.load_button.pack(side=tk.LEFT)
 
         # Add a "Materials" button
-        materials_button = Button(self, text="Specify Materials", command=self.open_materials_window)
+        materials_button = Button(self, text="Specify Materials and Scale", command=self.open_materials_window)
         materials_button.pack(side=tk.RIGHT)
 
         # Rectangle/Line type selection
@@ -75,7 +78,8 @@ class DrawShapesApp(tk.Tk):
             self.rect_type_var,
             "Storage sites",  # Red rectangles
             "Construction sites",  # Green rectangles
-            "Roads"  # Light blue lines
+            "Roads",  # Light blue lines
+            "Scale" # Orange line
         )
         self.rect_type_menu.pack(side=tk.LEFT)
 
@@ -151,8 +155,15 @@ class DrawShapesApp(tk.Tk):
                 self.canvas.create_line(
                     road["x1"], road["y1"], road["x2"], road["y2"], fill='#42bff5', width=4
                 )
+            
+            for road in self.roads:
                 self.canvas.create_oval(road["x1"] - dot_radius, road["y1"] - dot_radius, road["x1"] + dot_radius, road["y1"] + dot_radius, fill='white', outline='black')
                 self.canvas.create_oval(road["x2"] - dot_radius, road["y2"] - dot_radius, road["x2"] + dot_radius, road["y2"] + dot_radius, fill='white', outline='black')
+            
+            for scale in self.scale_line:
+                self.canvas.create_line(
+                    scale["x1"], scale["y1"], scale["x2"], scale["y2"], fill='orange', width=4
+                )
 
     def on_resize(self, event):
         # Recalculate the image size and position upon window resizing
@@ -171,10 +182,19 @@ class DrawShapesApp(tk.Tk):
             shape_type = self.rect_type_var.get()  # Get current drawing type
             if shape_type == "Roads":
                 self.canvas.create_line(x1, y1, x2, y2, fill='#42bff5', width=4, tag='preview')
-            else:
-                outline_color = 'red' if shape_type == "Storage sites" else '#00FF7F'
+            
+            elif shape_type == "Storage sites":
+                outline_color = 'red'
                 self.canvas.create_rectangle(x1, y1, x2, y2, outline=outline_color, width=4, tag='preview')
 
+            elif shape_type == "Construction sites":
+                outline_color = '#00FF7F'
+                self.canvas.create_rectangle(x1, y1, x2, y2, outline=outline_color, width=4, tag='preview')
+            
+            elif shape_type == "Scale":
+                outline_color = 'orange'
+                self.canvas.create_line(x1, y1, x2, y2, fill='orange', width=4, tag='preview')
+            
     def end_draw(self, event):
         if self.drawing:
             self.drawing = False
@@ -213,8 +233,9 @@ class DrawShapesApp(tk.Tk):
                 self.canvas.create_line(new_road["x1"], new_road["y1"], new_road["x2"], new_road["y2"], fill='#42bff5', width=4)
 
             else:
-                outline_color = 'red' if shape_type == "Storage sites" else '#00FF7F'
+                # outline_color = 'red' if shape_type == "Storage sites" else '#00FF7F'
                 if shape_type == "Storage sites":
+                    outline_color = 'red'
                     self.storage_sites.append({
                         "x1": x1,
                         "y1": y1,
@@ -296,6 +317,7 @@ class DrawShapesApp(tk.Tk):
 
 
                 elif shape_type == "Construction sites":
+                    outline_color = '#00FF7F'
                     self.construction_sites.append({
                         "x1": x1,
                         "y1": y1,
@@ -376,6 +398,17 @@ class DrawShapesApp(tk.Tk):
                         self.construction_sites_hidden_roads.append(hidden_road)
 
                     self.canvas.create_rectangle(x1, y1, x2, y2, outline=outline_color, width=4)
+                
+                elif shape_type == "Scale":
+                    outline_color = 'orange'
+                    self.scale_line.append({
+                        "x1": x1,
+                        "y1": y1,
+                        "x2": x2,
+                        "y2": y2,
+                    })
+
+                    self.canvas.create_line(x1, y1, x2, y2, fill='orange', width=4)
 
 
             # refresh the canvas
@@ -423,6 +456,9 @@ class DrawShapesApp(tk.Tk):
         # Create a new window
         self.materials_names_window = Toplevel(self)
 
+        # Specify the name of each material
+        Label(self.materials_names_window, text="Specify the name of each material").pack()
+
         # Create an input form for each material
         self.materials_name_entries = []
         for i in range(self.num_materials):
@@ -452,11 +488,18 @@ class DrawShapesApp(tk.Tk):
         self.materials_window = Toplevel(self)
 
         # Add a label and an entry for the number of materials
+        frame0 = tk.Frame(self.materials_window)
+        frame0.pack(fill='x')
+        Label(frame0, text="Number of materials:").pack(side='left')
+        self.materials_entry = Entry(frame0)
+        self.materials_entry.pack(side='right')
+
+        # Specify the scale
         frame1 = tk.Frame(self.materials_window)
         frame1.pack(fill='x')
-        Label(frame1, text="Number of materials:").pack(side='left')
-        self.materials_entry = Entry(frame1)
-        self.materials_entry.pack(side='right')
+        Label(frame1, text="Scale bar length in meters:").pack(side='left')
+        self.scale_entry = Entry(frame1)
+        self.scale_entry.pack(side='right')
 
         # Add a label and an entry for the maximum number of sites a material may be spread over
         frame2 = tk.Frame(self.materials_window)
@@ -478,6 +521,9 @@ class DrawShapesApp(tk.Tk):
     def submit_materials(self):
         # Get the number of materials from the entry
         self.num_materials = int(self.materials_entry.get())
+
+        # Get the scale from the entry
+        self.scale = float(self.scale_entry.get()) / abs(self.scale_line[0]["x1"] - self.scale_line[0]["x2"])
 
         # Get the maximum number of sites a material may be spread over
         self.max_sites = int(self.max_sites_entry.get())
@@ -501,7 +547,7 @@ class DrawShapesApp(tk.Tk):
 
                 # Add the quantity to the list for the material
                 self.site_materials[i,j] = quantity
-        
+
         # Close the sites window
         self.sites_window.destroy()
 
@@ -535,7 +581,6 @@ class DrawShapesApp(tk.Tk):
             
             self.site_entries.append(self.site_entries_ind)
 
-        # Add a "Submit" button
         Button(self.sites_window, text="Submit", command=self.submit_sites).pack()
 
     def distance_point_line(self, point, line):
@@ -585,7 +630,7 @@ class DrawShapesApp(tk.Tk):
         self.all_roads = self.roads + self.storage_sites_hidden_roads + self.construction_sites_hidden_roads
 
         # Determine the distance between each construction site and storage site
-        distances = Dijkstra_algorithm(self.all_roads, self.construction_sites_centers, self.storage_sites_centers, 1)
+        distances = Dijkstra_algorithm(self.all_roads, self.construction_sites_centers, self.storage_sites_centers, scale=self.scale)
 
         construction_coordinates = np.array(self.construction_sites_centers)  
         construction_sites_materials = np.array(self.site_materials) * 1000  # tons to kg
@@ -677,9 +722,6 @@ class DrawShapesApp(tk.Tk):
 
         # Open the sites window
         self.open_sites_window()
-
-
-       
 
 # Run the application
 if __name__ == "__main__":

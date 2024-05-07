@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 import numpy as np
+from Distance_calculation import Dijkstra_algorithm
 
 # Application class
 class DrawShapesApp(tk.Tk):
