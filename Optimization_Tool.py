@@ -6,7 +6,7 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
 
     # materials = ['Earth', 'Steel', 'Concrete'] 
 
-    # construction sites - information
+    # # construction sites - information
     # construction_coordinates = np.array([[0, 0],
     #                                     [9, 0],
     #                                     [5, 4],
@@ -106,20 +106,22 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
 
 
     # get the status
-    status = plp.LpStatus[problem.status]
-    # print(f"Status: {status}")
+    # status = plp.LpStatus[problem.status]
+    # # print(f"Status: {status}")
 
 
-    # # output the results
+    # # # output the results
     # for v in problem.variables():
     #     print(v.name, "=", v.varValue)
 
 
     # Output the objective function value
-    # print("Total Fuel Consumption =", plp.value(problem.objective))
+    print("Total Fuel Consumption =", plp.value(problem.objective))
 
     materials_array = np.zeros((n, m, len(materials)))
     trips_array = np.zeros((n, m, len(materials)))
+
+    destinations_matrix = np.zeros((len(materials), m, n))
 
     for variable in problem.variables():
         # Variable name example: q_(i)_(j)_(k) or t_(i)_(j)_(k)
@@ -134,6 +136,7 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
 
             # Store material quantities in numpy array
             materials_array[i, j, materials.index(k)] = var_value
+            destinations_matrix[materials.index(k), j, i] = var_value
 
         # For t variables
         if name[0].startswith("t_"):
@@ -149,6 +152,8 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
 
     materials_per_site = np.sum(materials_array, axis=0)
 
+    tot_fuel_consumption = plp.value(problem.objective)
+
     # print(materials_per_site)
 
     # print("Trips Array:")
@@ -158,5 +163,5 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
     #       text.append(f'Storage site {index+1} contains {materials_per_site[index, 0]} kg Earth, {materials_per_site[index, 1]} kg Steel, {materials_per_site[index, 2]} kg Concrete')
     #       print(f'Storage site {index+1} contains {materials_per_site[index, 0]} kg Earth, {materials_per_site[index, 1]} kg Steel, {materials_per_site[index, 2]} kg Concrete')
 
-    return materials_per_site
+    return materials_per_site, destinations_matrix, tot_fuel_consumption
 

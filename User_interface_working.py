@@ -48,6 +48,8 @@ class DrawShapesApp(tk.Tk):
         self.storage_sites_hidden_roads = []   # storage sites entry/exit points
         self.construction_sites_hidden_roads = []  # storage sites entry/exit points
 
+        self.standby_coords = None
+
         self.amount_of_ee_points = 2
 
         self.current_shape = []
@@ -66,6 +68,10 @@ class DrawShapesApp(tk.Tk):
         # Buttons for loading image and saving data
         self.load_button = tk.Button(self, text="Load Image", command=self.load_image)
         self.load_button.pack(side=tk.LEFT)
+
+        # Add a "Standby Locations" button
+        standby_button = Button(self, text="2. Determine Standby Locations", command=self.open_standby_window)
+        standby_button.pack(side=tk.RIGHT)
 
         # Add a "Materials" button
         materials_button = Button(self, text="1. Specify Materials and Scale", command=self.open_materials_window)
@@ -164,6 +170,14 @@ class DrawShapesApp(tk.Tk):
                 self.canvas.create_line(
                     scale["x1"], scale["y1"], scale["x2"], scale["y2"], fill='orange', width=4
                 )
+            
+
+            standby_dot_radius = 10
+            if self.standby_coords:
+                for idx, coord in enumerate(self.standby_coords):
+                    self.canvas.create_oval(coord[0] - standby_dot_radius, coord[1] - standby_dot_radius, coord[0] + standby_dot_radius, coord[1] + standby_dot_radius, fill='orange', outline='orange')
+                    text = str(self.materials_names[idx])
+                    self.canvas.create_text(coord[0], (coord[1] + 3 * standby_dot_radius), text=text, font=('Helvetica 20 bold'), fill='orange')
 
     def on_resize(self, event):
         # Recalculate the image size and position upon window resizing
@@ -624,7 +638,7 @@ class DrawShapesApp(tk.Tk):
 
     def open_results_window(self):
         # Create a new window
-        self.results_window = Toplevel(self)
+        # self.results_window = Toplevel(self)
 
         # combine all (hidden) roads
         self.all_roads = self.roads + self.storage_sites_hidden_roads + self.construction_sites_hidden_roads
@@ -641,40 +655,68 @@ class DrawShapesApp(tk.Tk):
         max_storage_possible = self.max_storage_possible
 
         # Call the optimization tool
-        materials_per_site = optimization_tool(construction_coordinates=construction_coordinates, construction_sites_materials=construction_sites_materials, storage_coordinates=storage_coordinates, materials=materials, distances=distances, vehicles=vehicles, max_sites=max_sites, max_storage_possible=max_storage_possible)
+        materials_per_site, destination_matrix, tot_fuel_consumption = optimization_tool(construction_coordinates=construction_coordinates, construction_sites_materials=construction_sites_materials, storage_coordinates=storage_coordinates, materials=materials, distances=distances, vehicles=vehicles, max_sites=max_sites, max_storage_possible=max_storage_possible)
+
+        self.storage_site_materials = materials_per_site
+
+        self.destination_matrix = destination_matrix
+
+        self.tot_fuel_consumption = tot_fuel_consumption
 
         # Print the results
         # print(materials_per_site)
 
         # code for creating table
-        for i in range(materials_per_site.shape[0] + 1):
-            row_frame = tk.Frame(self.results_window)  # create a new frame for each row
-            row_frame.pack(fill='x')  # pack the frame into the parent widget
+        for k in range(self.num_materials + 1):
+            if k < self.num_materials:
+                self.results_window = Toplevel(self)
+                for i in range(destination_matrix.shape[0] + 2):
+                    row_frame = tk.Frame(self.results_window)  # create a new frame for each row
+                    row_frame.pack(fill='x')  # pack the frame into the parent widget
 
-            for j in range(materials_per_site.shape[1] + 1):
-                if i == 0 and not j == 0:
-                    e = tk.Entry(row_frame, width=20, fg='black',
-                                 font=('Arial',16,'bold'), bg='light grey', justify='center')
-                    e.pack(side='left')  # pack the entry into the row frame
-                    e.insert(tk.END, str(materials[j-1])+' [kg]')
-                
-                elif j == 0 and not i == 0:
-                    e = tk.Entry(row_frame, width=20, fg='black',
-                                 font=('Arial',16,'bold'), bg='light grey')
-                    e.pack(side='left')  # pack the entry into the row frame
-                    e.insert(tk.END, 'Storage site ' + str(i))
+                    for j in range(destination_matrix.shape[1] + 1):
+                        title_column = (destination_matrix.shape[1] + 1) // 2
 
-                elif i == 0 and j == 0:
-                    e = tk.Entry(row_frame, width=20, fg='black',
-                                 font=('Arial',16,'bold'), bg='light grey')
-                    e.pack(side='left')  # pack the entry into the row frame
-                    e.insert(tk.END, '')
-                    
-                else:
-                    e = tk.Entry(row_frame, width=20, fg='black',
-                                 font=('Arial',16), justify='center')
-                    e.pack(side='left')  # pack the entry into the row frame
-                    e.insert(tk.END, str(materials_per_site[i-1][j-1]))
+                        if i == 1 and not j == 0:
+                            e = tk.Entry(row_frame, width=20, fg='black',
+                                        font=('Arial',16,'bold'), bg='light grey', justify='center')
+                            e.pack(side='left')  # pack the entry into the row frame
+                            e.insert(tk.END, 'C' + str(j))
+                        
+                        elif j == 0 and not i == 0 and not i == 1:
+                            e = tk.Entry(row_frame, width=20, fg='black',
+                                        font=('Arial',16,'bold'), bg='light grey')
+                            e.pack(side='left')  # pack the entry into the row frame
+                            e.insert(tk.END, 'S' + str(i-1))
+
+                        elif i == 1 and j == 0:
+                            e = tk.Entry(row_frame, width=20, fg='black',
+                                        font=('Arial',16,'bold'), bg='light grey')
+                            e.pack(side='left')  # pack the entry into the row frame
+                            e.insert(tk.END, 'Sites/Construction Sites')
+                        
+                        elif i == 0 and j == title_column:
+                            e = tk.Entry(row_frame, width=20, fg='black',
+                                        font=('Arial',16,'bold'), bg='light grey' ,justify='center')
+                            e.pack(side='left')  # pack the entry into the row frame
+                            e.insert(tk.END, str(self.materials_names[k]) + ' [kg]')
+
+                        elif i == 0 and not j == title_column:
+                            e = tk.Entry(row_frame, width=20, fg='black',
+                                        font=('Arial',16,'bold'), bg='light grey')
+                            e.pack(side='left')  # pack the entry into the row frame
+                            e.insert(tk.END, '')
+
+                        else:
+                            e = tk.Entry(row_frame, width=20, fg='black',
+                                        font=('Arial',16), justify='center')
+                            e.pack(side='left')  # pack the entry into the row frame
+                            e.insert(tk.END, str(round(destination_matrix[k, i-2, j-1], 2)))
+            
+            else: 
+                self.text_window = Toplevel(self)
+                window_text = "Total Fuel Consumption: " + str(round(self.tot_fuel_consumption, 2)) + " liters"
+                Label(self.text_window, text=window_text, font=('Arial',25)).pack()
 
     def open_vehicles_window(self):
         # create a new window
@@ -722,6 +764,37 @@ class DrawShapesApp(tk.Tk):
 
         # Open the sites window
         self.open_sites_window()
+
+    def open_standby_window(self):
+
+        # Determine the standby locations
+        self.standby_coords = []
+        for i in range(self.num_materials):
+            total_material = 0
+            x_coord = 0
+            y_coord = 0
+            # determine the weighed coordinates of each construction site and add them up
+            for j in range(len(self.construction_sites)):
+                construction_site_material = self.site_materials[j][i]                  # get the amount of material at the construction site
+                construcion_site_coordinate = self.construction_sites_centers[j]        # get the coordinates of the construction site
+                total_material += construction_site_material                            # add the material to the total
+                x_coord += construction_site_material * construcion_site_coordinate[0]  # weigh the x coordinate
+                y_coord += construction_site_material * construcion_site_coordinate[1]  # weigh the y coordinate
+            
+            for k in range(len(self.storage_sites)):
+                storage_site_material = self.storage_site_materials[k][i]       # get the amount of material at the storage site
+                storage_site_coordinate = self.storage_sites_centers[k]         # get the coordinates of the storage site
+                total_material += storage_site_material                         # add the material to the total
+                x_coord += storage_site_material * storage_site_coordinate[0]   # weigh the x coordinate  
+                y_coord += storage_site_material * storage_site_coordinate[1]   # weigh the y coordinate
+            
+            x_coord /= total_material
+            y_coord /= total_material
+
+            mean_coordinate = (x_coord, y_coord)
+            self.standby_coords.append(mean_coordinate)
+        
+        self.update_image_display()
 
 # Run the application
 if __name__ == "__main__":
