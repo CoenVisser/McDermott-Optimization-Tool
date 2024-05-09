@@ -175,7 +175,7 @@ class DrawShapesApp(tk.Tk):
             standby_dot_radius = 10
             if self.standby_coords:
                 for idx, coord in enumerate(self.standby_coords):
-                    self.canvas.create_oval(coord[0] - standby_dot_radius, coord[1] - standby_dot_radius, coord[0] + standby_dot_radius, coord[1] + standby_dot_radius, fill='orange', outline='orange')
+                    self.canvas.create_oval(coord[0] - standby_dot_radius, coord[1] - standby_dot_radius, coord[0] + standby_dot_radius, coord[1] + standby_dot_radius, fill='orange', outline='black')
                     text = str(self.materials_names[idx])
                     self.canvas.create_text(coord[0], (coord[1] + 3 * standby_dot_radius), text=text, font=('Helvetica 20 bold'), fill='orange')
 
@@ -525,7 +525,7 @@ class DrawShapesApp(tk.Tk):
         # Add a label and an entry for the maximum materials that can be stored at a storage site
         frame3 = tk.Frame(self.materials_window)
         frame3.pack(fill='x')
-        Label(frame3, text="Maximum materials that can be stored at a storage site in metric tons:").pack(side='left')
+        Label(frame3, text="Maximum materials that can be stored at a storage site in kilograms per square meter:").pack(side='left')
         self.max_storage_possible_entry = Entry(frame3)
         self.max_storage_possible_entry.pack(side='right')
 
@@ -542,8 +542,14 @@ class DrawShapesApp(tk.Tk):
         # Get the maximum number of sites a material may be spread over
         self.max_sites = int(self.max_sites_entry.get())
 
-        # Get the maximum materials that can be stored at a storage site
-        self.max_storage_possible = 1000 * int(self.max_storage_possible_entry.get())
+        # Get the maximum materials in kg/m^2 that can be stored at a storage site
+        self.max_storage_possible = float(self.max_storage_possible_entry.get())
+
+        # Store the max storage possible in an array
+        self.max_storage_per_site = np.zeros(len(self.storage_sites))
+
+        for i in range(len(self.storage_sites)):
+            self.max_storage_per_site[i] = self.max_storage_possible * (abs(self.storage_sites[i]["x2"] - self.storage_sites[i]["x1"]) * abs(self.storage_sites[i]["y2"] - self.storage_sites[i]["y1"])) * (self.scale ** 2)
 
         # Close the materials window
         self.materials_window.destroy()
@@ -573,7 +579,9 @@ class DrawShapesApp(tk.Tk):
         self.sites_window = Toplevel(self)
 
         # Create a title label
-        Label(self.sites_window, text="Enter the amount of each material in metric tons").pack()
+        tot_materials_mass = np.sum(self.max_storage_per_site) / 1000
+        label_text = f'Enter the amount of each material in metric tons for each construction site, the maximum is {round(tot_materials_mass, 0)} tons'
+        Label(self.sites_window, text=label_text).pack()
 
         self.site_entries = []
         # Create a section for each construction site
@@ -652,10 +660,32 @@ class DrawShapesApp(tk.Tk):
         materials = self.materials_names
         vehicles = self.vehicles
         max_sites = self.max_sites
-        max_storage_possible = self.max_storage_possible
+        max_storage_capacity = self.max_storage_per_site.reshape(-1, 1)
+
+        print(construction_coordinates)
+        print('############################################')
+        print(construction_sites_materials)
+        print('############################################')
+        print(storage_coordinates)
+        print('############################################')
+        print(materials)
+        print('############################################')
+        print(distances)
+        print('############################################')
+        print(vehicles)
+        print('############################################')
+        print(max_sites)
+        print('############################################')
+        print(max_storage_capacity)
+
+        # self.waiting_window = Toplevel(self)
+        # waiting_text = "This can take up to 2 minutes, please wait"
+        # Label(self.waiting_window, text=waiting_text, font=('Arial',25)).pack()
 
         # Call the optimization tool
-        materials_per_site, destination_matrix, tot_fuel_consumption = optimization_tool(construction_coordinates=construction_coordinates, construction_sites_materials=construction_sites_materials, storage_coordinates=storage_coordinates, materials=materials, distances=distances, vehicles=vehicles, max_sites=max_sites, max_storage_possible=max_storage_possible)
+        materials_per_site, destination_matrix, tot_fuel_consumption = optimization_tool(construction_coordinates=construction_coordinates, construction_sites_materials=construction_sites_materials, storage_coordinates=storage_coordinates, materials=materials, distances=distances, vehicles=vehicles, max_sites=max_sites, max_storage_capacity=max_storage_capacity)
+
+        # self.waiting_window.destroy()
 
         self.storage_site_materials = materials_per_site
 
@@ -670,12 +700,12 @@ class DrawShapesApp(tk.Tk):
         for k in range(self.num_materials + 1):
             if k < self.num_materials:
                 self.results_window = Toplevel(self)
-                for i in range(destination_matrix.shape[0] + 2):
+                for i in range(destination_matrix.shape[1] + 2):
                     row_frame = tk.Frame(self.results_window)  # create a new frame for each row
                     row_frame.pack(fill='x')  # pack the frame into the parent widget
 
-                    for j in range(destination_matrix.shape[1] + 1):
-                        title_column = (destination_matrix.shape[1] + 1) // 2
+                    for j in range(destination_matrix.shape[2] + 1):
+                        title_column = (destination_matrix.shape[2] + 1) // 2
 
                         if i == 1 and not j == 0:
                             e = tk.Entry(row_frame, width=20, fg='black',
@@ -711,7 +741,7 @@ class DrawShapesApp(tk.Tk):
                             e = tk.Entry(row_frame, width=20, fg='black',
                                         font=('Arial',16), justify='center')
                             e.pack(side='left')  # pack the entry into the row frame
-                            e.insert(tk.END, str(round(destination_matrix[k, i-2, j-1], 2)))
+                            e.insert(tk.END, f'{round(destination_matrix[k, i-2, j-1], 2):,}')
             
             else: 
                 self.text_window = Toplevel(self)

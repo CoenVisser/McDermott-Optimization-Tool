@@ -2,7 +2,7 @@ import numpy as np
 from Extensions import vehicle
 import pulp as plp
 
-def optimization_tool(construction_coordinates, construction_sites_materials, storage_coordinates, materials, distances, vehicles, max_sites, max_storage_possible=10000):
+def optimization_tool(construction_coordinates, construction_sites_materials, storage_coordinates, materials, distances, vehicles, max_sites, max_storage_capacity):
 
     # materials = ['Earth', 'Steel', 'Concrete'] 
 
@@ -29,8 +29,8 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
     #                                 [2, 3],
     #                                 [3, 5]])
 
-    max_storage_possible = 10000
-    max_storage_capacity = np.ones((storage_coordinates.shape[0], 1)) * max_storage_possible
+    # max_storage_possible = 10000
+    # max_storage_capacity = np.ones((storage_coordinates.shape[0], 1)) * max_storage_possible
 
     # materials setup
     n = construction_coordinates.shape[0]   # number of buildings
@@ -73,7 +73,7 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
     ##
     ##
     ## Constraint: Each storage site has either at least 30% or none of a given material
-    BigM = 10000  # Large number for Big M constraint
+    BigM = 10000000000000000  # Large number for Big M constraint
     min_fraction = 1 / float(max_sites)  # Minimum fraction of material at each storage site
 
     # Constraint for each material in each storage site
@@ -102,7 +102,7 @@ def optimization_tool(construction_coordinates, construction_sites_materials, st
 
 
     # solve the problem
-    problem.solve(plp.PULP_CBC_CMD())
+    problem.solve(plp.PULP_CBC_CMD(options=['seconds 120']))
 
 
     # get the status
