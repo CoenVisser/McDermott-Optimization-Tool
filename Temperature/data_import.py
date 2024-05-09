@@ -83,3 +83,4 @@ plt.legend()
 
 # Display the plot
 plt.show()
+plt.savefig('Temperature/temp.png')
