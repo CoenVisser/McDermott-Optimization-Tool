@@ -1,23 +1,11 @@
-McDermott Utilization Optimization Code
-
-The main optimization code can be found in Optimization_Tool.py, it uses the 'vehicles' object from Extensions.py
-
-Hopefully, it'll soon be possible to link the user interface to the optimization tool
-
--------------------
-Problem description:
-Imagine you've got n buildings to be built and m storage locations for the necessary materials. These buildings and storage locations are fixed and scattered on a large plot of land. Each storage location can hold an certain (tbd, maybe user input) maximum amount of materials. Each building requires a set amount of each material. Each materials has an associated vehicle that is used to transport it. Each of these vehicles has a specific fuel consumption. Also, each vehicle has a limited carrying capacity. We want to determine what is the best distribution of the materials over the m storage locations. The best distribution of materials is based on the distribution that minimizes the total fuel consumption of all vehicles.
-
-We aim to build a tool that is able to automatically determine this distribution. The tool should be able to take a plotplan, which can then be annotated by the used to tell the program the coordinates of the storage locations, the buildings and the road layout. Afterwards, the tool will determine, using a (still undetermined) algorithm, the shortest path between each of the storage locations and each of the buildings. Next, the user has to fill in the required materials per building and the properties of the vehicles used to transport them. This information is then fed into the tool. The tool then returns the optimal distribution of materials over the different storage locations. 
-
-The decision variables are as follows:
-
-$q_{ijk}$​: Total quantity of material k transported from storage location j to building i.
-
-$t_{ijk}$: Number of trips to transport material k from storage location j to building i.
+We have developed a piece of software that aids the project planners by finding the optimal distribution of materials over a given construction site based on minimizing the utilization of the equipment used to transport these materials. This directly impacts the fuel usage of each vehicle and, thus, also a significant portion of emissions and costs. For example, in case a certain construction site requires a lot of earth and a bit of steel and the equipment used to transport the earth emits far more emissions than the steel equipment, the software will make the decision to place the steel at a storage site further away to make room at a nearby storage site for the earth
 
 
+Afterwards, the software determines the optimal distribution of materials over the construction site. It does the following:
 
-The objective function (to be minimized) is as follows:
-$`F= \sum_{i=1}^{n} \sum_{j=1}^{m} \sum_{k=1}^{l  } t_{i, j, k} \times 2 \times \text{distance}(j, i) \times \text{fuel\_rate}(k)`$
--------------------
+1. Using Dijkstra’s algorithm in graph theory, the shortest path between each storage site ‘node’ and each construction site ‘node’ is found
+2. Then this is fed into the optimization tool, which is constrained based on the data inputted by the user. The objective of the tool is to minimize the following equation (i, j and k are integers representing the construction sites, storage sites and materials, respectively):
+![Equation to be minimized](https://github.com/CoenVisser/McDermott/assets/150930345/f16076c0-0957-4e79-9818-7d3577563e93)
+  - **t_i,j,k:** The amount of trips required to bring all of material ‘k’ from storage site ‘j’ to construction site ‘i’
+  - **distances_(j-1, i-1):** the distance (calculated with Dijkstra’s algorithm) from storage site ‘j’ to construction site ‘i’
+  - **fuel_rate_k:** the fuel consumption per meter driven of each the vehicle used to transport material ‘k’
